@@ -34,6 +34,7 @@ pub use crate::config::bindings::{
     Action, BindingKey, BindingMode, KeyBinding, MouseAction, MouseEvent, SearchAction, ViAction,
 };
 pub use crate::config::ui_config::UiConfig;
+use crate::config::window::BIN_NAME;
 use crate::logging::LOG_TARGET_CONFIG;
 
 /// Maximum number of depth for the configuration file imports.
@@ -162,6 +163,15 @@ pub fn reload(config_path: &Path, options: &mut Options) -> Result<UiConfig> {
 fn after_loading(config: &mut UiConfig, options: &mut Options) {
     // Override config with CLI options.
     options.override_config(config);
+
+    if let Some(shader) = config.window.background_shader.take() {
+        let base = config.config_paths.first().map_or(Path::new(""), PathBuf::as_path);
+        let shader = normalize_import(base, shader);
+        if !config.config_paths.is_empty() {
+            config.config_paths.push(shader.clone());
+        }
+        config.window.background_shader = Some(shader);
+    }
 }
 
 /// Load configuration file and log errors.
@@ -364,27 +374,25 @@ fn prune_yaml_nulls(value: &mut serde_yaml::Value, warn_pruned: bool) {
 /// Get the location of the first found default config file paths
 /// according to the following order:
 ///
-/// 1. $XDG_CONFIG_HOME/alacritty/alacritty.toml
-/// 2. $XDG_CONFIG_HOME/alacritty.toml
-/// 3. $HOME/.config/alacritty/alacritty.toml
-/// 4. $HOME/.alacritty.toml
-/// 5. /etc/alacritty/alacritty.toml
+/// 1. $XDG_CONFIG_HOME/glacritty/glacritty.toml
+/// 2. $XDG_CONFIG_HOME/glacritty.toml
+/// 3. $HOME/.config/glacritty/glacritty.toml
+/// 4. $HOME/.glacritty.toml
+/// 5. /etc/glacritty/glacritty.toml
 #[cfg(not(windows))]
 pub fn installed_config(suffix: &str) -> Option<PathBuf> {
-    let file_name = format!("alacritty.{suffix}");
+    let file_name = format!("{BIN_NAME}.{suffix}");
 
     // Try using XDG location by default.
-    xdg::BaseDirectories::with_prefix("alacritty")
+    xdg::BaseDirectories::with_prefix(BIN_NAME)
         .find_config_file(&file_name)
         .or_else(|| xdg::BaseDirectories::new().find_config_file(&file_name))
         .or_else(|| {
             if let Ok(home) = env::var("HOME") {
-                // Fallback path: $HOME/.config/alacritty/alacritty.toml.
-                let fallback = PathBuf::from(&home).join(".config/alacritty").join(&file_name);
+                let fallback = PathBuf::from(&home).join(".config").join(BIN_NAME).join(&file_name);
                 if fallback.exists() {
                     return Some(fallback);
                 }
-                // Fallback path: $HOME/.alacritty.toml.
                 let hidden_name = format!(".{file_name}");
                 let fallback = PathBuf::from(&home).join(hidden_name);
                 if fallback.exists() {
@@ -392,15 +400,15 @@ pub fn installed_config(suffix: &str) -> Option<PathBuf> {
                 }
             }
 
-            let fallback = PathBuf::from("/etc/alacritty").join(&file_name);
+            let fallback = PathBuf::from("/etc").join(BIN_NAME).join(&file_name);
             fallback.exists().then_some(fallback)
         })
 }
 
 #[cfg(windows)]
 pub fn installed_config(suffix: &str) -> Option<PathBuf> {
-    let file_name = format!("alacritty.{suffix}");
-    dirs::config_dir().map(|path| path.join("alacritty").join(file_name)).filter(|new| new.exists())
+    let file_name = format!("{BIN_NAME}.{suffix}");
+    dirs::config_dir().map(|path| path.join(BIN_NAME).join(file_name)).filter(|new| new.exists())
 }
 
 #[cfg(test)]

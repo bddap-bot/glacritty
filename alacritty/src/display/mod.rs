@@ -1,12 +1,13 @@
 //! The display subsystem including window management, font rasterization, and
 //! GPU drawing.
 
-use std::cmp;
 use std::fmt::{self, Formatter};
 use std::mem::{self, ManuallyDrop};
 use std::num::NonZeroU32;
 use std::ops::Deref;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
+use std::{cmp, fs};
 
 use glutin::config::GetGlConfig;
 use glutin::context::{NotCurrentContext, PossiblyCurrentContext};
@@ -15,7 +16,7 @@ use glutin::error::ErrorKind;
 use glutin::prelude::*;
 use glutin::surface::{Surface, SwapInterval, WindowSurface};
 
-use log::{debug, info};
+use log::{debug, error, info};
 use parking_lot::MutexGuard;
 use serde::{Deserialize, Serialize};
 use winit::dpi::PhysicalSize;
@@ -51,6 +52,7 @@ use crate::display::hint::{HintMatch, HintState};
 use crate::display::meter::Meter;
 use crate::display::window::Window;
 use crate::event::{Event, EventType, Mouse, SearchState};
+use crate::logging::LOG_TARGET_CONFIG;
 use crate::message_bar::{MessageBuffer, MessageType};
 use crate::renderer::rects::{RenderLine, RenderLines, RenderRect};
 use crate::renderer::{self, GlyphCache, Renderer, platform};
@@ -390,6 +392,7 @@ pub struct Display {
 
     renderer: ManuallyDrop<Renderer>,
     renderer_preference: Option<RendererPreference>,
+    background_shader: Option<PathBuf>,
 
     surface: ManuallyDrop<Surface<WindowSurface>>,
 
@@ -437,6 +440,8 @@ impl Display {
 
         // Create renderer.
         let mut renderer = Renderer::new(&context, config.debug.renderer)?;
+        let background_shader = config.window.background_shader.clone();
+        load_background_shader(&mut renderer, background_shader.as_deref());
 
         // Load font common glyphs to accelerate rendering.
         debug!("Filling glyph cache with common glyphs");
@@ -519,6 +524,7 @@ impl Display {
             visual_bell: VisualBell::from(&config.bell),
             renderer: ManuallyDrop::new(renderer),
             renderer_preference: config.debug.renderer,
+            background_shader,
             surface: ManuallyDrop::new(surface),
             colors: List::from(&config.colors),
             frame_timer: FrameTimer::new(),
@@ -594,6 +600,7 @@ impl Display {
         let renderer = Renderer::new(&self.context, self.renderer_preference)
             .expect("failed to recreate renderer after reset");
         self.renderer = ManuallyDrop::new(renderer);
+        load_background_shader(&mut self.renderer, self.background_shader.as_deref());
 
         // Resize the renderer.
         self.renderer.resize(&self.size_info);
@@ -820,6 +827,7 @@ impl Display {
         // Add damage from alacritty's UI elements overlapping terminal.
 
         let requires_full_damage = self.visual_bell.intensity() != 0.
+            || self.renderer.background_animated()
             || self.hint_state.active()
             || search_state.regex().is_some();
         if requires_full_damage {
@@ -836,6 +844,7 @@ impl Display {
         self.make_current();
 
         self.renderer.clear(background_color, config.window_opacity());
+        self.renderer.draw_background(&size_info, config.window_opacity());
         let mut lines = RenderLines::new();
 
         // Optimize loop hint comparator.
@@ -1046,11 +1055,20 @@ impl Display {
         self.damage_tracker.swap_damage();
     }
 
+    pub fn background_animated(&self) -> bool {
+        self.renderer.background_animated()
+    }
+
     /// Update to a new configuration.
     pub fn update_config(&mut self, config: &UiConfig) {
         self.damage_tracker.debug = config.debug.highlight_damage;
         self.visual_bell.update_config(&config.bell);
         self.colors = List::from(&config.colors);
+
+        self.background_shader.clone_from(&config.window.background_shader);
+        self.make_current();
+        load_background_shader(&mut self.renderer, self.background_shader.as_deref());
+        self.damage_tracker.frame().mark_fully_damaged();
     }
 
     /// Update the mouse/vi mode cursor hint highlighting.
@@ -1631,4 +1649,15 @@ fn window_size(
     let height = (padding.1).mul_add(2., grid_height).floor();
 
     PhysicalSize::new(width as u32, height as u32)
+}
+
+/// A failed load leaves the previous shader in place, so a broken edit never blanks the window.
+fn load_background_shader(renderer: &mut Renderer, path: Option<&Path>) {
+    let source = path.map(fs::read_to_string).transpose();
+    let result = source
+        .map_err(|err| err.to_string().into())
+        .and_then(|source| renderer.set_background_shader(source.as_deref()));
+    if let (Err(err), Some(path)) = (result, path) {
+        error!(target: LOG_TARGET_CONFIG, "Unable to load background shader {}: {err}", path.display());
+    }
 }

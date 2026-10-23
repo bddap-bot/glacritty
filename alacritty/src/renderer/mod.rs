@@ -20,9 +20,11 @@ use crate::display::SizeInfo;
 use crate::display::color::Rgb;
 use crate::display::content::RenderableCell;
 use crate::gl;
+use crate::renderer::background::BackgroundRenderer;
 use crate::renderer::rects::{RectRenderer, RenderRect};
 use crate::renderer::shader::ShaderError;
 
+mod background;
 pub mod platform;
 pub mod rects;
 mod shader;
@@ -89,6 +91,7 @@ enum TextRendererProvider {
 pub struct Renderer {
     text_renderer: TextRendererProvider,
     rect_renderer: RectRenderer,
+    background: Option<BackgroundRenderer>,
     robustness: bool,
 }
 
@@ -171,7 +174,7 @@ impl Renderer {
             }
         }
 
-        Ok(Self { text_renderer, rect_renderer, robustness })
+        Ok(Self { text_renderer, rect_renderer, background: None, robustness })
     }
 
     pub fn draw_cells<I: Iterator<Item = RenderableCell>>(
@@ -274,6 +277,27 @@ impl Renderer {
                 alpha,
             );
             gl::Clear(gl::COLOR_BUFFER_BIT);
+        }
+    }
+
+    /// Replace the background shader, keeping the current one if `source` fails to compile.
+    pub fn set_background_shader(&mut self, source: Option<&str>) -> Result<(), Error> {
+        let shader_version = match self.text_renderer {
+            TextRendererProvider::Glsl3(_) => ShaderVersion::Glsl3,
+            TextRendererProvider::Gles2(_) => ShaderVersion::Gles2,
+        };
+        self.background = source.map(|s| BackgroundRenderer::new(shader_version, s)).transpose()?;
+        Ok(())
+    }
+
+    pub fn background_animated(&self) -> bool {
+        self.background.as_ref().is_some_and(BackgroundRenderer::uses_time)
+    }
+
+    pub fn draw_background(&self, size_info: &SizeInfo, opacity: f32) {
+        if let Some(background) = &self.background {
+            background.draw(size_info, opacity);
+            self.set_viewport(size_info);
         }
     }
 

@@ -1,4 +1,5 @@
 use std::fmt::{self, Formatter};
+use std::path::PathBuf;
 
 use log::{error, warn};
 use serde::de::{self, MapAccess, Visitor};
@@ -13,8 +14,11 @@ use alacritty_config_derive::{ConfigDeserialize, SerdeReplace};
 use crate::config::LOG_TARGET_CONFIG;
 use crate::config::ui_config::{Delta, Percentage};
 
-/// Default Alacritty name, used for window title and class.
-pub const DEFAULT_NAME: &str = "Alacritty";
+/// Default name, used for window title and class.
+pub const DEFAULT_NAME: &str = "Glacritty";
+
+/// Name of the binary and of its config and runtime directories.
+pub const BIN_NAME: &str = "glacritty";
 
 #[derive(ConfigDeserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct WindowConfig {
@@ -65,6 +69,9 @@ pub struct WindowConfig {
 
     /// Window level.
     pub level: WindowLevel,
+
+    /// Shadertoy-style GLSL fragment shader drawn behind the cells.
+    pub background_shader: Option<PathBuf>,
 }
 
 impl Default for WindowConfig {
@@ -85,6 +92,7 @@ impl Default for WindowConfig {
             decorations_theme_variant: Default::default(),
             option_as_alt: Default::default(),
             level: Default::default(),
+            background_shader: Default::default(),
         }
     }
 }

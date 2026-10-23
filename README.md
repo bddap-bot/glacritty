@@ -1,3 +1,43 @@
+# Glacritty
+
+Alacritty with a GPU shader as its background. The binary is `glacritty` and it
+reads `~/.config/glacritty/glacritty.toml`, so it installs beside Alacritty
+without either reading the other's config.
+
+![Example shaders](extra/shaders/preview.jpg)
+
+```toml
+[window]
+background_shader = "~/.config/glacritty/aurora.glsl"
+```
+
+The shader is a Shadertoy-style GLSL fragment shader drawn across the whole
+window behind the cells:
+
+```glsl
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = fragCoord / iResolution.xy;
+    fragColor = vec4(0.1 * uv, 0.15 + 0.05 * sin(iTime), 1.0);
+}
+```
+
+- `iResolution` (`vec3`): window size in pixels.
+- `iTime` (`float`): seconds since the shader loaded.
+- The output alpha is ignored; `window.opacity` applies as usual. Text, cursor,
+  selection and cells with a non-default background draw on top as before.
+- A shader that reads `iTime` redraws every frame; one that does not redraws
+  only when the terminal changes, like stock Alacritty.
+- Relative paths resolve against the config file's directory. Saving the shader
+  reloads it in every open window; a compile error shows in the message bar and
+  the last good shader keeps running.
+
+Examples live in [extra/shaders](extra/shaders): `aurora`, `plasma`, `starfield`
+and `synthgrid` animate; `dusk` is still.
+
+Rebasing on upstream is described in [AGENTS.md](AGENTS.md).
+
+---
+
 <p align="center">
     <img width="200" alt="Alacritty Logo" src="https://raw.githubusercontent.com/alacritty/alacritty/master/extra/logo/compat/alacritty-term%2Bscanlines.png">
 </p>

@@ -31,8 +31,8 @@ impl ShaderProgram {
     pub fn new(
         shader_version: ShaderVersion,
         shader_header: Option<&str>,
-        vertex_shader: &'static str,
-        fragment_shader: &'static str,
+        vertex_shader: &str,
+        fragment_shader: &str,
     ) -> Result<Self, ShaderError> {
         let vertex_shader =
             Shader::new(shader_version, shader_header, gl::VERTEX_SHADER, vertex_shader)?;
@@ -87,7 +87,7 @@ impl Shader {
         shader_version: ShaderVersion,
         shader_header: Option<&str>,
         kind: GLenum,
-        source: &'static str,
+        source: &str,
     ) -> Result<Self, ShaderError> {
         let version_header = shader_version.shader_header();
         let mut sources = Vec::<*const GLchar>::with_capacity(3);
