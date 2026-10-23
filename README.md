@@ -37,6 +37,8 @@ and `synthgrid` animate on dark color schemes; `dusk` is still. `paper` is a
 still linen-paper texture for a warm light scheme (background `#E8E1D9`), and
 `paper-drift` is the same texture with ochre and teal washes drifting across it.
 
+![paper, then paper-drift at two times](extra/shaders/paper.jpg)
+
 Rebasing on upstream is described in [AGENTS.md](AGENTS.md).
 
 ---
