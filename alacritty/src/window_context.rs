@@ -375,8 +375,8 @@ impl WindowContext {
         // Force the display to process any pending display update.
         self.display.process_renderer_update();
 
-        // Request immediate re-draw while the visual bell or background shader animates.
-        if !self.display.visual_bell.completed() || self.display.background_animated() {
+        // Request immediate re-draw if visual bell animation is not finished yet.
+        if !self.display.visual_bell.completed() {
             // We can get an OS redraw which bypasses alacritty's frame throttling, thus
             // marking the window as dirty when we don't have frame yet.
             if self.display.window.has_frame {
@@ -395,6 +395,15 @@ impl WindowContext {
             &self.config,
             &mut self.search_state,
         );
+
+        // Drawing just consumed the frame where a frame timer paces redraws, so `dirty` waits for
+        // the next one; where the platform paces them instead, the frame is still available.
+        if self.display.background_animated() {
+            self.dirty = true;
+            if self.display.window.has_frame {
+                self.display.window.request_redraw();
+            }
+        }
     }
 
     /// Process events for this terminal window.
