@@ -27,9 +27,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   selection and cells with a non-default background draw on top as before.
 - A shader that reads `iTime` redraws every frame; one that does not redraws
   only when the terminal changes, like stock Alacritty.
-- Relative paths resolve against the config file's directory. Saving the shader
-  reloads it in every open window; a compile error shows in the message bar and
-  the last good shader keeps running.
+- Relative paths resolve against the main config file's directory. Saving the
+  shader reloads it in every open window, as long as a config file is in use; a
+  compile error shows in the message bar and the last good shader keeps running.
+  Reloading keeps `iTime` running.
 
 Examples live in [extra/shaders](extra/shaders): `aurora`, `plasma`, `starfield`
 and `synthgrid` animate on dark color schemes, `paper` on light ones; `dusk` is

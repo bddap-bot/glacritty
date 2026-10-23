@@ -9,7 +9,9 @@ use crate::renderer::shader::{ShaderError, ShaderProgram, ShaderVersion};
 const BACKGROUND_SHADER_V: &str = include_str!("../../res/background.v.glsl");
 
 const GLSL3_PRELUDE: &str = "out vec4 glacrittyFragColor;\n";
-const GLES2_PRELUDE: &str = "precision highp float;\n#define glacrittyFragColor gl_FragColor\n";
+const GLES2_PRELUDE: &str = "#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp \
+                             float;\n#else\nprecision mediump float;\n#endif\n#define \
+                             glacrittyFragColor gl_FragColor\n";
 
 const UNIFORMS: &str =
     "uniform vec3 iResolution;\nuniform float iTime;\nuniform float glacrittyOpacity;\n#line 1\n";
@@ -30,7 +32,11 @@ pub struct BackgroundRenderer {
 }
 
 impl BackgroundRenderer {
-    pub fn new(shader_version: ShaderVersion, source: &str) -> Result<Self, ShaderError> {
+    pub fn new(
+        shader_version: ShaderVersion,
+        source: &str,
+        start: Instant,
+    ) -> Result<Self, ShaderError> {
         let prelude = match shader_version {
             ShaderVersion::Glsl3 => GLSL3_PRELUDE,
             ShaderVersion::Gles2 => GLES2_PRELUDE,
@@ -65,7 +71,11 @@ impl BackgroundRenderer {
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);
         }
 
-        Ok(Self { program, vao, vbo, u_resolution, u_time, u_opacity, start: Instant::now() })
+        Ok(Self { program, vao, vbo, u_resolution, u_time, u_opacity, start })
+    }
+
+    pub fn start(&self) -> Instant {
+        self.start
     }
 
     /// The GLSL compiler strips uniforms the shader never reads, so this is exact.

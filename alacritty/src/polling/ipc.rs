@@ -19,7 +19,7 @@ use crate::config::window::{BIN_NAME, DEFAULT_NAME};
 use crate::event::{Event, EventType};
 
 /// Environment variable name for the IPC socket path.
-const ALACRITTY_SOCKET_ENV: &str = "ALACRITTY_SOCKET";
+const ALACRITTY_SOCKET_ENV: &str = "GLACRITTY_SOCKET";
 
 /// IPC socket listener.
 pub struct IpcListener {
@@ -42,7 +42,7 @@ impl IpcListener {
         // Register socket path as environment variable for `alacritty msg`.
         unsafe { env::set_var(ALACRITTY_SOCKET_ENV, path.as_os_str()) };
         if options.daemon {
-            println!("ALACRITTY_SOCKET={}; export ALACRITTY_SOCKET", path.display());
+            println!("{ALACRITTY_SOCKET_ENV}={}; export {ALACRITTY_SOCKET_ENV}", path.display());
         }
 
         Ok(Self { event_proxy, socket, data: Default::default() })

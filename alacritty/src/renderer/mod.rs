@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use std::ffi::{CStr, CString};
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Instant;
 use std::{fmt, ptr};
 
 use ahash::RandomState;
@@ -286,7 +287,9 @@ impl Renderer {
             TextRendererProvider::Glsl3(_) => ShaderVersion::Glsl3,
             TextRendererProvider::Gles2(_) => ShaderVersion::Gles2,
         };
-        self.background = source.map(|s| BackgroundRenderer::new(shader_version, s)).transpose()?;
+        let start = self.background.as_ref().map_or_else(Instant::now, BackgroundRenderer::start);
+        self.background =
+            source.map(|s| BackgroundRenderer::new(shader_version, s, start)).transpose()?;
         Ok(())
     }
 
