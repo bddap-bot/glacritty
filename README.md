@@ -32,7 +32,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   the last good shader keeps running.
 
 Examples live in [extra/shaders](extra/shaders): `aurora`, `plasma`, `starfield`
-and `synthgrid` animate; `dusk` is still.
+and `synthgrid` animate on dark color schemes, `paper` on light ones; `dusk` is
+still.
 
 Rebasing on upstream is described in [AGENTS.md](AGENTS.md).
 
