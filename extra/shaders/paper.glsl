@@ -1,16 +1,25 @@
 float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+    vec3 q = fract(vec3(p.xyx) * 0.1031);
+    q += dot(q, q.yzx + 33.33);
+    return fract((q.x + q.y) * q.z);
+}
+
+float noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+               mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 uv = fragCoord / iResolution.y;
-    float t = iTime * 0.05;
-    vec2 a = vec2(0.4 + 0.3 * sin(t * 1.3), 0.5 + 0.3 * cos(t * 0.9));
-    vec2 b = vec2(1.2 + 0.4 * cos(t * 0.7), 0.4 + 0.3 * sin(t * 1.1));
-    float warm = exp(-3.0 * dot(uv - a, uv - a));
-    float cool = exp(-3.0 * dot(uv - b, uv - b));
-    vec3 col = vec3(0.91, 0.88, 0.85);
-    col += vec3(0.06, 0.03, -0.015) * warm + vec3(-0.03, 0.0, 0.045) * cool;
-    col += (hash(floor(fragCoord)) - 0.5) * 0.015;
+    vec2 p = fragCoord;
+    float cloud = 0.6 * noise(p / 150.0) + 0.4 * noise(p / 40.0) - 0.5;
+    float weave = 0.5 * (noise(p * vec2(0.55, 0.07)) + noise(p * vec2(0.07, 0.55))) - 0.5;
+    float grain = hash(floor(p)) - 0.5;
+    vec3 paper = vec3(0.910, 0.882, 0.851);
+    vec3 light = vec3(0.996, 0.961, 0.933);
+    vec3 shade = vec3(0.847, 0.765, 0.647);
+    vec3 col = paper + (light - shade) * (0.30 * cloud + 0.25 * weave + 0.10 * grain);
     fragColor = vec4(col, 1.0);
 }

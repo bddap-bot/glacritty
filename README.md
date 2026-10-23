@@ -33,8 +33,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   Reloading keeps `iTime` running.
 
 Examples live in [extra/shaders](extra/shaders): `aurora`, `plasma`, `starfield`
-and `synthgrid` animate on dark color schemes, `paper` on light ones; `dusk` is
-still.
+and `synthgrid` animate on dark color schemes; `dusk` is still. `paper` is a
+still linen-paper texture for a warm light scheme (background `#E8E1D9`), and
+`paper-drift` is the same texture with ochre and teal washes drifting across it.
 
 Rebasing on upstream is described in [AGENTS.md](AGENTS.md).
 
